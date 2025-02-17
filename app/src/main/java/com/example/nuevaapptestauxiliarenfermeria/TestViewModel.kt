@@ -60,21 +60,18 @@ class TestViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun parseQuestions(fileContent: String): List<Question> {
-        // Elimina cualquier BOM o caracteres invisibles al inicio
-        val cleanedContent = fileContent.replace("\uFEFF", "").trim()
-
         val questions = mutableListOf<Question>()
         // Separamos el contenido en bloques usando uno o más saltos de línea en blanco
-        val blocks = cleanedContent.split(Regex("\\n\\s*\\n"))
+        val blocks = fileContent.split(Regex("\\n\\s*\\n"))
             .map { it.trim() }
             .filter { it.isNotEmpty() }
 
         for (block in blocks) {
             // Dividimos cada bloque en líneas y eliminamos las que estén vacías
             val lines = block.lines().map { it.trim() }.filter { it.isNotEmpty() }
-            if (lines.size < 6) continue  // Ignoramos bloques que no tengan al menos 6 líneas
+            if (lines.size < 6) continue  // Si el bloque no tiene al menos 6 líneas, lo ignoramos
 
-            // Línea 1: Extraemos el número y el enunciado utilizando una expresión regular
+            // Línea 1: Extraemos el número y el enunciado usando una expresión regular.
             val headerRegex = Regex("^([0-9]+)\\.\\s*(.*)")
             val headerMatch = headerRegex.find(lines[0]) ?: continue
             val number = headerMatch.groupValues[1].toIntOrNull() ?: 0
@@ -95,17 +92,17 @@ class TestViewModel(application: Application) : AndroidViewModel(application) {
             val optionC = cleanOption(lines[3])
             val optionD = cleanOption(lines[4])
 
-            // Línea 6: Extraemos la respuesta correcta usando substringAfter, asumiendo que el bloque sigue el formato esperado.
-            val correctAnswerLine = lines[5]
-            val correctAnswerStr = correctAnswerLine.substringAfter("Respuesta Correcta:", "").trim()
-            val correctAnswer = correctAnswerStr.firstOrNull() ?: 'A'
+            // Línea 6: Extraemos la respuesta correcta utilizando una expresión regular que admite variantes:
+            // "Respuesta Correcta:" o "La respuesta correcta es:"
+            val answerRegex = Regex("(?i)(?:La\\s+)?respuesta\\s+correcta(?:\\s+es)?\\s*:\\s*([A-D])")
+            val answerMatch = answerRegex.find(lines[5])
+            val correctAnswer = answerMatch?.groupValues?.get(1)?.firstOrNull() ?: 'A'
 
             questions.add(Question(number, enunciado, optionA, optionB, optionC, optionD, correctAnswer))
         }
 
         return questions
     }
-
 
 
     fun selectAnswer(answer: Char) {
