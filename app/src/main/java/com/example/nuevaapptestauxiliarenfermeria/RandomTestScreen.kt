@@ -17,6 +17,7 @@ import com.example.nuevaapptestauxiliarenfermeria.TestViewModel
 
 @Composable
 fun RandomTestScreen(testViewModel: TestViewModel, onExit: () -> Unit) {
+    // Generamos una lista aleatoria de preguntas y la recordamos durante la sesión.
     val randomQuestions = remember { testViewModel.questions.shuffled() }
     var currentIndex by remember { mutableStateOf(0) }
     var selectedAnswer by remember { mutableStateOf<Char?>(null) }
@@ -39,6 +40,7 @@ fun RandomTestScreen(testViewModel: TestViewModel, onExit: () -> Unit) {
             },
             dismissButton = {
                 Button(onClick = {
+                    // Reiniciamos el modo aleatorio
                     currentIndex = 0
                     selectedAnswer = null
                     answered = false
@@ -51,7 +53,7 @@ fun RandomTestScreen(testViewModel: TestViewModel, onExit: () -> Unit) {
         return
     }
 
-    // Mostrar el número original de la pregunta
+    // Mostramos el número original de la pregunta
     val displayNumber = randomQuestions[currentIndex].number
     val question = randomQuestions[currentIndex]
 
@@ -82,7 +84,11 @@ fun RandomTestScreen(testViewModel: TestViewModel, onExit: () -> Unit) {
                 isSelected = selectedAnswer == 'A',
                 correctAnswer = question.correctAnswer,
                 answered = answered,
-                onSelect = { selectedAnswer = 'A'; answered = true }
+                onSelect = {
+                    testViewModel.selectAnswerForQuestion(question, 'A')
+                    selectedAnswer = 'A'
+                    answered = true
+                }
             )
             AnswerOption(
                 optionLetter = 'B',
@@ -90,7 +96,11 @@ fun RandomTestScreen(testViewModel: TestViewModel, onExit: () -> Unit) {
                 isSelected = selectedAnswer == 'B',
                 correctAnswer = question.correctAnswer,
                 answered = answered,
-                onSelect = { selectedAnswer = 'B'; answered = true }
+                onSelect = {
+                    testViewModel.selectAnswerForQuestion(question, 'B')
+                    selectedAnswer = 'B'
+                    answered = true
+                }
             )
             AnswerOption(
                 optionLetter = 'C',
@@ -98,7 +108,11 @@ fun RandomTestScreen(testViewModel: TestViewModel, onExit: () -> Unit) {
                 isSelected = selectedAnswer == 'C',
                 correctAnswer = question.correctAnswer,
                 answered = answered,
-                onSelect = { selectedAnswer = 'C'; answered = true }
+                onSelect = {
+                    testViewModel.selectAnswerForQuestion(question, 'C')
+                    selectedAnswer = 'C'
+                    answered = true
+                }
             )
             AnswerOption(
                 optionLetter = 'D',
@@ -106,7 +120,11 @@ fun RandomTestScreen(testViewModel: TestViewModel, onExit: () -> Unit) {
                 isSelected = selectedAnswer == 'D',
                 correctAnswer = question.correctAnswer,
                 answered = answered,
-                onSelect = { selectedAnswer = 'D'; answered = true }
+                onSelect = {
+                    testViewModel.selectAnswerForQuestion(question, 'D')
+                    selectedAnswer = 'D'
+                    answered = true
+                }
             )
         }
         Spacer(modifier = Modifier.height(16.dp))

@@ -7,11 +7,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -21,15 +17,14 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun ReviewScreen(
     testViewModel: TestViewModel,
-    onFinish: () -> Unit,      // Callback para volver al menú (HomeScreen)
-    onExitReview: () -> Unit   // Callback para salir (por ejemplo, ir a ExitScreen)
+    onFinish: () -> Unit,      // Callback para volver al menú principal (HomeScreen)
+    onExitReview: () -> Unit   // Callback para salir del modo repaso (p. ej., ir a ExitScreen)
 ) {
     // Obtenemos la lista de estadísticas de preguntas con fallos > 0
     val reviewStats = testViewModel.getReviewQuestions()
-    // Extraemos la lista de preguntas ordenadas de mayor a menor fallos
+    // Extraemos la lista de preguntas ordenadas (por mayor cantidad de fallos)
     val reviewQuestions = reviewStats.sortedByDescending { it.wrong }.map { it.question }
 
-    // Si no hay preguntas para repasar, mostramos un diálogo y retornamos
     if (reviewQuestions.isEmpty()) {
         AlertDialog(
             onDismissRequest = { },
@@ -44,33 +39,46 @@ fun ReviewScreen(
         return
     }
 
-    // Estado para llevar la cuenta del índice de repaso
     var currentReviewIndex by remember { mutableStateOf(0) }
     var selectedAnswer by remember { mutableStateOf<Char?>(null) }
     var answered by remember { mutableStateOf(false) }
+    var showFinishDialog by remember { mutableStateOf(false) }
 
-    // Si hemos llegado al final de la lista, mostramos el diálogo de fin de repaso.
+    // Verificamos si se han repasado todas las preguntas
     if (currentReviewIndex >= reviewQuestions.size) {
+        showFinishDialog = true
+    }
+
+    if (showFinishDialog) {
         AlertDialog(
             onDismissRequest = { },
             title = { Text("Repaso finalizado") },
             text = { Text("Has completado el repaso de las preguntas más falladas. ¿Qué deseas hacer?") },
             confirmButton = {
-                Button(onClick = { onExitReview() }) {
-                    Text("Salir")
+                Button(onClick = {
+                    // Volver a repasar: reiniciamos el índice y los estados
+                    currentReviewIndex = 0
+                    selectedAnswer = null
+                    answered = false
+                    showFinishDialog = false
+                }) {
+                    Text("Volver a repasar")
                 }
             },
             dismissButton = {
-                Button(onClick = { onFinish() }) {
-                    Text("Volver al menú")
+                Button(onClick = {
+                    showFinishDialog = false
+                    onExitReview()   // Salir del modo repaso
+                }) {
+                    Text("Salir")
                 }
             }
         )
         return
     }
 
-    // Usamos un número secuencial basado en el índice para mostrar la numeración en pantalla.
-    val reviewDisplayNumber = currentReviewIndex + 1
+    // Se muestra el número original de la pregunta (proveniente del campo 'number')
+    val displayNumber = reviewQuestions[currentReviewIndex].number
     val currentQuestion = reviewQuestions[currentReviewIndex]
 
     Column(
@@ -83,7 +91,7 @@ fun ReviewScreen(
     ) {
         Spacer(modifier = Modifier.height(48.dp))
         Text(
-            text = "Pregunta $reviewDisplayNumber: ${currentQuestion.text}",
+            text = "Pregunta $displayNumber: ${currentQuestion.text}",
             fontSize = 20.sp,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
@@ -129,7 +137,7 @@ fun ReviewScreen(
         }
         Spacer(modifier = Modifier.height(16.dp))
         LinearProgressIndicator(
-            progress = reviewDisplayNumber.toFloat() / reviewQuestions.size,
+            progress = (currentReviewIndex + 1).toFloat() / reviewQuestions.size,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
         )
         Spacer(modifier = Modifier.height(16.dp))

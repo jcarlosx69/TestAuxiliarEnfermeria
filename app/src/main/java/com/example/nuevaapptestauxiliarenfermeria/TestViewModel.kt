@@ -60,24 +60,25 @@ class TestViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun parseQuestions(fileContent: String): List<Question> {
+        // Elimina el BOM (Byte Order Mark) y espacios en blanco iniciales/finales
+        val cleanedContent = fileContent.replace("\uFEFF", "").trim()
         val questions = mutableListOf<Question>()
         // Separamos el contenido en bloques usando uno o más saltos de línea en blanco
-        val blocks = fileContent.split(Regex("\\n\\s*\\n"))
+        val blocks = cleanedContent.split(Regex("\\n\\s*\\n"))
             .map { it.trim() }
             .filter { it.isNotEmpty() }
 
         for (block in blocks) {
-            // Dividimos cada bloque en líneas y eliminamos las que estén vacías
             val lines = block.lines().map { it.trim() }.filter { it.isNotEmpty() }
             if (lines.size < 6) continue  // Si el bloque no tiene al menos 6 líneas, lo ignoramos
 
-            // Línea 1: Extraemos el número y el enunciado usando una expresión regular.
+            // Línea 1: Extraemos el número y el enunciado usando una expresión regular
             val headerRegex = Regex("^([0-9]+)\\.\\s*(.*)")
             val headerMatch = headerRegex.find(lines[0]) ?: continue
             val number = headerMatch.groupValues[1].toIntOrNull() ?: 0
             val enunciado = headerMatch.groupValues[2].trim()
 
-            // Función auxiliar para limpiar cada opción (elimina prefijos como "A) " o "A) A)")
+            // Función auxiliar para limpiar cada opción
             fun cleanOption(line: String): String {
                 var result = line.replace(Regex("^[A-D]\\)\\s*[A-D]\\)\\s*"), "")
                 if (result == line) {
@@ -86,23 +87,42 @@ class TestViewModel(application: Application) : AndroidViewModel(application) {
                 return result.trim()
             }
 
-            // Líneas 2 a 5: Opciones A, B, C y D
             val optionA = cleanOption(lines[1])
             val optionB = cleanOption(lines[2])
             val optionC = cleanOption(lines[3])
             val optionD = cleanOption(lines[4])
 
-            // Línea 6: Extraemos la respuesta correcta utilizando una expresión regular que admite variantes:
-            // "Respuesta Correcta:" o "La respuesta correcta es:"
-            val answerRegex = Regex("(?i)(?:La\\s+)?respuesta\\s+correcta(?:\\s+es)?\\s*:\\s*([A-D])")
-            val answerMatch = answerRegex.find(lines[5])
-            val correctAnswer = answerMatch?.groupValues?.get(1)?.firstOrNull() ?: 'A'
+            // Línea 6: Extraemos la respuesta correcta
+            val correctAnswerLine = lines[5]
+            val correctAnswerStr = correctAnswerLine.substringAfter("Respuesta Correcta:", "").trim()
+            val correctAnswer = correctAnswerStr.firstOrNull() ?: 'A'
 
             questions.add(Question(number, enunciado, optionA, optionB, optionC, optionD, correctAnswer))
         }
 
         return questions
     }
+
+    fun resetAnswered() {
+        _answered.value = false
+    }
+
+    fun selectAnswerForQuestion(question: Question, answer: Char) {
+        // Obtiene o crea las estadísticas para la pregunta usando su número
+        val stat = _questionStats.getOrPut(question.number) {
+            QuestionStat(question)
+        }
+        if (answer.uppercaseChar() == question.correctAnswer.uppercaseChar()) {
+            stat.correct += 1
+            _correctCount.value += 1
+        } else {
+            stat.wrong += 1
+            _wrongCount.value += 1
+        }
+        // Persistimos las estadísticas actualizadas
+        saveQuestionStats()
+    }
+
 
 
     fun selectAnswer(answer: Char) {
